@@ -1,24 +1,38 @@
-import logo from './logo.svg';
 import './App.css';
+import React, { lazy, Suspense } from 'react';
+import './Asset/main.css'
+import { Route, Routes } from 'react-router-dom';
+import { ThemeProvider } from '@mui/styles';
+import { theme } from './Auth/Theme';
+import Loadable from 'react-loadable';
+// import SignUp from './Auth/SignUp';
+// import Login from './Auth/Login';
+// const Login = lazy(() => import('./Auth/Login'));
+// const SignUp = lazy(() => import('./Auth/SignUp'));
+const Loading = () => <div>Loading...</div>;
 
+const Login = Loadable({
+  loader: () => import('./Auth/Login'),
+  loading: Loading,
+});
+
+const SignUp = Loadable({
+  loader: () => import('./Auth/SignUp'),
+  loading: Loading,
+});
 function App() {
   return (
-    <div className="App">
-      <header className="App-header">
-        <img src={logo} className="App-logo" alt="logo" />
-        <p>
-          Edit <code>src/App.js</code> and save to reload.
-        </p>
-        <a
-          className="App-link"
-          href="https://reactjs.org"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          Learn React
-        </a>
-      </header>
-    </div>
+    <>
+      <ThemeProvider theme={theme}>
+      <Suspense fallback={<div>Loading...</div>}>
+
+        <Routes>
+          <Route path='/' element={<Login />} />
+          <Route path='/signup' element={<SignUp />} />
+        </Routes>
+        </Suspense>
+      </ThemeProvider>
+    </>
   );
 }
 
