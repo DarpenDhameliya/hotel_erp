@@ -17,7 +17,7 @@ const useStyleAuth = makeStyles((theme) => ({
     minHeight: "100vh",
     position: "relative",
     zIndex: 1,
-    backgroundColor: "aliceblue",
+    backgroundColor: "#0d6efd08",
     paddingTop: "70px",
     // backgroundImage:`url(${image})`
   },
@@ -66,6 +66,22 @@ const useStyleAuth = makeStyles((theme) => ({
     display:'flex',
     justifyContent:'flex-end',
     marginTop:'10px'
+  },
+  setProductpaper: {
+    textAlign: "left",
+    backgroundColor: theme.palette.background.paper,
+    padding: theme.spacing(3),
+    display: "flex",
+    justifyContent: "center",
+    flexDirection: "column",
+    margin: "auto",
+    width: "100% !important",
+    borderRadius: "10px",
+    marginTop: "30px",
+  },
+  setStyleredio: {
+    padding: "3px !important",
+
   }
 }));
 

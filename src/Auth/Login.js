@@ -1,34 +1,85 @@
-
-
-import React, { useState, useEffect } from "react";
-import { Container, TextField, Button, InputAdornment, IconButton, OutlinedInput, Typography, Paper, Grid } from "@mui/material";
+import React, {
+  Suspense,
+  lazy,
+  useCallback,
+  useEffect,
+  useMemo,
+  useState,
+} from "react";
 import { Link, useNavigate } from "react-router-dom";
+import Container from "@mui/material/Container";
+import Button from "@mui/material/Button";
+import InputAdornment from "@mui/material/InputAdornment";
+import IconButton from "@mui/material/IconButton";
+import OutlinedInput from "@mui/material/OutlinedInput";
+import Typography from "@mui/material/Typography";
+import Paper from "@mui/material/Paper";
+import Grid from "@mui/material/Grid";
 import useStyleAuth from "./AuthStyle";
-import Textfield from "../container/TextField";
-import ErrorField from "../container/ErrorField";
+import { useSocket } from "../context/SocketContext";
+import {  SuccessAlertLogin } from "../container/Alert";
 const ariaLabel = { "aria-label": "description" };
+const Textfield = lazy(() => import("../container/TextField"));
+const ErrorField = lazy(() => import("../container/ErrorField"));
+const Lable = lazy(() => import("../container/Lable"));
 
 const Login = () => {
+  const socket = useSocket();
+
   const [passvisible, setPassvisible] = useState(false);
   const [password, setPassword] = useState("");
-  const [userid, setUserid] = useState('')
+  const [userid, setUserid] = useState("");
   const [dbFetcherr, setDbFetcherr] = useState("");
-  const [error, setError] = useState({})
-
+  const [error, setError] = useState({});
+  const [successMsg, setSuccessMsg] = useState(false);
   const classes = useStyleAuth();
   const history = useNavigate();
 
-  const handleClickShowPassword = () => {
-    setPassvisible(!passvisible);
-  };
+  useEffect(() => {
+    if (!socket) return;
+    socket.on("login_responce", handleSuccessResponse);
+    return () => {
+      socket.off("login_responce", handleSuccessResponse);
+    };
+  }, [socket]);
 
-  const handlekeypress = (e) => {
+  const handleSuccessResponse = useCallback(
+    (response) => {
+      console.log(response.result);
+      if (response.status === "success") {
+        setSuccessMsg(true);
+        setUserid("");
+        setPassword("");
+        setTimeout(() => {
+          setSuccessMsg(false);
+          if (response.result.type === "admin") {
+            history("/admin/deshbord");
+          } else if (response.result.type === "service") {
+            history("/service/deshbord");
+          } else {
+            history("/kitchen/deshbord");
+          }
+        }, 1000);
+        localStorage.setItem("user", response.result.authToken);
+        localStorage.setItem("type", response.result.type);
+        localStorage.setItem("name", response.result.name);
+      } else {
+        setDbFetcherr(response.error);
+        setTimeout(() => {
+          setDbFetcherr("");
+        }, 3000);
+      }
+    },
+    [history]
+  );
+  const handlekeypress = useCallback((e) => {
     if (e.key === "Enter") {
       handlelogin();
     }
-  };
+  }, [password]);
 
-  const handlelogin = () => {
+  const handlelogin = useCallback(() => {
+    console.log()
     if (!userid || !password) {
       setError((prevError) => ({
         ...prevError,
@@ -36,36 +87,26 @@ const Login = () => {
         password: !password ? "Required" : "",
       }));
       setTimeout(() => {
-        setError({})
+        setError({});
       }, 3000);
     } else {
-      // api
-      //   .post("/auth/login", {
-      //     userid,
-      //     password,
-      //   })
-      //   .then((result) => {
-      //     localStorage.setItem("ssAdmin", result.data.result);
-      //     history.push("/app/product");
-      //   })
-      //   .catch((err) => {
-      //     setDbFetcherr(err.response.data.error);
-      //     setTimeout(() => {
-      //       setDbFetcherr("");
-      //     }, 3000);
-      //   });
+      if (socket) {
+        socket.emit("user_login", { userid, password });
+      }
     }
-  };
-  const idhandler = (e) => {
-    setUserid(e.target.value)
-  }
+  }, [socket, userid, password]);
+
+  const memoizedSuccessAlert = useMemo(() => <SuccessAlertLogin message={"Login Success"} />, []);
+
   return (
     <>
+      {/* <Suspense> */}
       <Container
         component="main"
         maxWidth="xl"
         className={classes.setcontainer}
       >
+        {successMsg && memoizedSuccessAlert}
         <div className={classes.setpageheading}>
           <Typography variant="h5" gutterBottom className={classes.setheading}>
             SSTPL
@@ -84,14 +125,18 @@ const Login = () => {
           <Grid container spacing={2}>
             <Grid item xs={12}>
               <div className={classes.setinput}>
-                <label className={classes.setlabel}>User Id :</label>
-                <Textfield value={userid} onchange={idhandler} placeholder="user id" />
+                <Lable lable={"User Id"} />
+                <Textfield
+                  value={userid}
+                  onchange={(e) => setUserid(e.target.value)}
+                  placeholder="user id"
+                />
                 {error.id && <ErrorField error={error.id} />}
               </div>
             </Grid>
             <Grid item xs={12}>
               <div className={classes.setinput}>
-                <label className={classes.setlabel}>Password :</label>
+                <Lable lable={"Password"} />
                 <OutlinedInput
                   id="outlined-adornment-password"
                   value={password}
@@ -103,12 +148,21 @@ const Login = () => {
                   endAdornment={
                     <InputAdornment position="end">
                       <IconButton
-                        aria-label="toggle password visibility"
-                        onClick={handleClickShowPassword}
+                        onClick={() => setPassvisible(!passvisible)}
                         edge="end"
-                        InputProps={ariaLabel}
+                        // InputProps={ariaLabel}
                       >
-                        {passvisible ? <i className="fas fa-eye-slash" style={{ fontSize: "20px" }}></i> : <i className="fa fa-eye" style={{ fontSize: "20px" }}></i>}
+                        {passvisible ? (
+                          <i
+                            className="fas fa-eye-slash"
+                            style={{ fontSize: "20px" }}
+                          ></i>
+                        ) : (
+                          <i
+                            className="fa fa-eye"
+                            style={{ fontSize: "20px" }}
+                          ></i>
+                        )}
                       </IconButton>
                     </InputAdornment>
                   }
@@ -125,7 +179,7 @@ const Login = () => {
           >
             Login
           </Button>
-          <div className={classes.setbottomtypography} >
+          <div className={classes.setbottomtypography}>
             <Typography
               variant="body2"
               className={classes.setacctypography}
@@ -146,8 +200,10 @@ const Login = () => {
             </Typography>
           </div>
         </Paper>
-      </Container></>
-  )
-}
+      </Container>
+      {/* </Suspense> */}
+    </>
+  );
+};
 
-export default Login
+export default Login;

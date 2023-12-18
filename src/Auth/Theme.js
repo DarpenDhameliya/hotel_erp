@@ -1,10 +1,9 @@
 // import { createTheme } from "@material-ui/core";
-import { createTheme } from "@mui/material";
+import createTheme from "@mui/material/styles/createTheme";
 
 export let theme = createTheme({
   palette: {
     primary: {
-      // main: indigo[600],
       main: "#3c8dbc",
     },
   },
@@ -23,16 +22,15 @@ export let theme = createTheme({
     h5: {
       fontFamily: ["Poppins", "sans-serif"],
       fontWeight: 400,
-      fontSize: '1.5rem',
-      lineHeight: '1.334',
-      letterSpacing: '0em'
+      fontSize: "1.5rem",
+      lineHeight: "1.334",
+      letterSpacing: "0em",
     },
     h4: {
       fontFamily: ["Poppins", "sans-serif"],
     },
     h2: {
       fontFamily: ["Poppins", "sans-serif"],
-    }
+    },
   },
-
 });
