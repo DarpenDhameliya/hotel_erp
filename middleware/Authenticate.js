@@ -10,20 +10,19 @@ const Authenticate = async (token, next) => {
     } else {
         try {
             var match_user = jwt.verify(token, JWT_SECRET);
-            console.log(match_user,);
+
             user.find({ userid: match_user.userid }).then((result) => {
-                if (token == result[0].token) {
+                // if (token == result[0].token) {
                     let userData = {
                         id: match_user.userid,
                         type: match_user.type
                     }
-                    console.log(userData)
                     // return userData;
                     next(userData);
-                } else {
-                    console.lgo('error')
-                    errormessage("another device login");
-                }
+                // } else {
+                //     console.log('error')
+                //     errormessage("another device login");
+                // }
             });
         } catch (error) {
             console.log(error)
@@ -44,8 +43,8 @@ const RemoveToken_logout = async (token, next) => {
         let update = {
             $unset: { token: 1 }
         };
-        
-        if(match_user !== ''){
+
+        if (match_user !== '') {
             let filter = { userid: match_user.userid };
             user.find({ userid: match_user.userid }).then((result) => {
                 if (result[0].token) {

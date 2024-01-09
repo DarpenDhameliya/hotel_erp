@@ -28,6 +28,11 @@ const AuthSchema = new Schema({
   signintoken: {
     type: String,
   },
+  kitchencategory: [{
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'product'
+  }],
+
   token: {
     type: String,
   },

@@ -12,7 +12,10 @@ const CountSchema = new Schema({
   },
   id:{
     type:Number,
-  }
+  },
+  lastUpdatedDate: {
+    type: String,
+  },
 }) 
 
 const Countermodle = mongoose.model('odrcount',CountSchema)

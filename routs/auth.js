@@ -8,6 +8,7 @@ const {
   USER_EXIST,
 } = require("../response/HttpError.js");
 const Auth = require("../model/Auth.js");
+const mongoose = require('mongoose');
 
 // const signup = async ({ io, userData }) => {
 //   console.log("++++++++++++++++++++++", io.id, userData);
@@ -71,9 +72,52 @@ const Auth = require("../model/Auth.js");
 // }
 // };
 
+// const signup = async ({ io, userData }) => {
+//   try {
+//     let category = userData.kitchencategory
+//     let finddata = await Auth.find({ userid: userData.userid });
+//     if (finddata.length === 0) {
+//       if (userData.password) {
+//         var salt = await bcrypt.genSalt(10);
+//         var encyptpassword = await bcrypt.hash(userData.password, salt);
+
+//         try {
+//           var responce = await Auth.create({
+//             userid: userData.userid,
+//             password: encyptpassword,
+//             name: userData.name,
+//             type: userData.type,
+//             status: userData.status,
+//             kitchencategory: category.map((e) => mongoose.Types.ObjectId(e))
+//           });
+//           return successmessage(CREATE_SUCCESS);
+//         } catch (error) {
+//           console.log(error);
+//           if (error.name === "ValidationError") {
+//             var fieldErrors = {};
+//             Object.keys(error.errors).forEach((key) => {
+//               fieldErrors = error.errors[key].message;
+//             });
+//             return errormessage(fieldErrors);
+//           } else {
+//             return errormessage(error);
+//           }
+//         }
+//         return await responce;
+//       }
+//     } else {
+//       return errormessage(USER_EXIST);
+//     }
+//   } catch (error) {
+//     console.log(error)
+//     return errormessage(SERVER_ERROR);
+//   }
+// };
 const signup = async ({ io, userData }) => {
   try {
+    let category = userData.kitchencategory;
     let finddata = await Auth.find({ userid: userData.userid });
+
     if (finddata.length === 0) {
       if (userData.password) {
         var salt = await bcrypt.genSalt(10);
@@ -86,9 +130,11 @@ const signup = async ({ io, userData }) => {
             name: userData.name,
             type: userData.type,
             status: userData.status,
+            kitchencategory: category,
           });
           return successmessage(CREATE_SUCCESS);
         } catch (error) {
+          console.log(error);
           if (error.name === "ValidationError") {
             var fieldErrors = {};
             Object.keys(error.errors).forEach((key) => {
@@ -105,9 +151,11 @@ const signup = async ({ io, userData }) => {
       return errormessage(USER_EXIST);
     }
   } catch (error) {
+    console.log(error);
     return errormessage(SERVER_ERROR);
   }
 };
+
 
 const login = async ({ io, userData }) => {
   try {
@@ -131,7 +179,11 @@ const login = async ({ io, userData }) => {
                 $set: { token: authToken },
               }
             );
-            return successmessage({ authToken, type: finddata[0].type, name: finddata[0].name });
+            if (finddata[0].type === 'kitchen') {
+              return successmessage({ authToken, type: finddata[0].type, name: finddata[0].name , category: finddata[0].kitchencategory});
+            } else {
+              return successmessage({ authToken, type: finddata[0].type, name: finddata[0].name });
+            }
           } catch (error) {
             return errormessage(error);
           }

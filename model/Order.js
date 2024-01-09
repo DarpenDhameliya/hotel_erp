@@ -10,10 +10,10 @@ const OrderSchema = new Schema({
     type: Boolean,
     required: [true, "orderserv Required !!"],
   },
-  orderdate: {
-    type: Date,
-    required: [true, "Date Required !!"],
-  },
+  // orderdate: {
+  //   type: Date,
+  //   required: [true, "Date Required !!"],
+  // },
   Product: {
     type: mongoose.Schema.Types.ObjectId,
     ref: "product",
@@ -26,7 +26,7 @@ const OrderSchema = new Schema({
     type: String,
     required: [true, "Quantity Required !!"],
   },
-  date: {
+  orderdate: {
     type: Date,
     default: Date.now,
   },

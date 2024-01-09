@@ -7,10 +7,10 @@ const ProductSchema = new Schema({
     unique: true,
     required: [true, "Name Required !!"],
   },
-  quantity: {
-    type: Number,
-    required: [true, "Quantity Required!!"],
-  },
+  // quantity: {
+  //   type: Number,
+  //   required: [true, "Quantity Required!!"],
+  // },
   price: {
     type: Number,
     required: [true, "Price Required !!"],
@@ -22,7 +22,7 @@ const ProductSchema = new Schema({
   },
   mesur: {
     type: String,
-    enum: ["kg", "unit"],
+    enum: ["gm", "pcs"],
   },
   date: {
     type: Date,

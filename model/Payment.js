@@ -1,25 +1,33 @@
 const mongoose = require("mongoose");
 const { Schema } = mongoose;
 
-const OrderSchema = new Schema({
-  orderdate: {
-    type: Date,
-    required: [true, "Date Required !!"],
-  },
+const PaymentSchema = new Schema({
   orderid: {
     type: String,
-    required: [true, "Date Required !!"],
+    required: [true, "Id Required !!"],
   },
   amount: {
     type: Number,
     required: [true, "Amount Required !!"],
   },
- 
-  date: {
+  receiveamount: {
+    type: Number,
+  },
+  Receive: {
+    type: Boolean,
+    default: false,
+  },
+  discount: {
+    type: Number,
+  },
+  drinkamount: {
+    type: Number,
+  },
+  orderdate: {
     type: Date,
     default: Date.now,
   },
 });
 
-const Order = mongoose.model("order", OrderSchema);
-module.exports = Order;
+const Payment = mongoose.model("payment", PaymentSchema);
+module.exports = Payment;

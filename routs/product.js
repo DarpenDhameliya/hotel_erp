@@ -9,22 +9,24 @@ const {
 } = require("../response/HttpError.js");
 const Product = require("../model/product.js");
 
-const productList = async ({ io, userData }) => {
+const productList = async () => {
   try {
-    let successmessage = await Product.find({ userid: userData.userid });
+    let finddata = await Product.find({});
     if (finddata.length === 0) {
       return successmessage(NOT_FOUND);
     } else {
-      return successmessage(successmessage);
+      return successmessage(finddata);
     }
   } catch (error) {
+    console.log(error);
     return errormessage(SERVER_ERROR);
   }
 };
 
-const ProductAdd = async ({ io, userData }) => {
+const ProductAdd = async ({ userToken }) => {
+  console.log('api ===', userToken);
   try {
-    let { name, price, status, mesur } = userData;
+    let { name, price, status, mesur } = userToken;
     try {
       let responce = await Product.create({
         name,
@@ -50,12 +52,28 @@ const ProductAdd = async ({ io, userData }) => {
   }
 };
 
-const ProductUpdate = async ({ io, userData }) => {
+const productEditList = async ({  updtid }) => {
   try {
-    let { name, price, status, mesur, id } = userData;
-    let Find_Product = await Product.findById(id);
+    let finddata = await Product.findById(updtid);
+    if (finddata.length === 0) {
+      return successmessage(NOT_FOUND);
+    } else {
+      return successmessage(finddata);
+    }
+  } catch (error) {
+    console.log(error);
+    return errormessage(SERVER_ERROR);
+  }
+};
 
-    if (Find_Product.length > 0) {
+const ProductUpdate = async ({ io, userData, userToken }) => {
+  console.log('=========', userData)
+  console.log(userToken.updateId)
+  try {
+    let { name, price, status, mesur, updateId } = userToken;
+    let Find_Product = await Product.findById(updateId);
+    console.log('find data from update', Find_Product)
+    if (Find_Product.length !== 0) {
       try {
         let new_data = {};
         if (name) {
@@ -70,9 +88,8 @@ const ProductUpdate = async ({ io, userData }) => {
         if (mesur) {
           new_data.mesur = mesur;
         }
-
         let responce = await Product.findByIdAndUpdate(
-          id,
+          updateId,
           { $set: new_data },
           { new: true }
         );
@@ -96,11 +113,12 @@ const ProductUpdate = async ({ io, userData }) => {
   }
 };
 
-const ProductRemove = async ({ io, userData }) => {
+const ProductRemove = async ({ io, userData, userToken }) => {
+  console.log("Product Remove", userData, userToken)
   try {
     let { id } = userData;
     try {
-      let responce = await Product.findByIdAndDelete(id);
+      let responce = await Product.findByIdAndDelete(userToken.data);
       return successmessage(DELETE_SUCCESS);
     } catch (error) {
       return errormessage(error);
@@ -110,4 +128,4 @@ const ProductRemove = async ({ io, userData }) => {
   }
 };
 
-module.exports = { productList, ProductAdd, ProductUpdate, ProductRemove };
+module.exports = { productList, ProductAdd, ProductUpdate, ProductRemove, productEditList };

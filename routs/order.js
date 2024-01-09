@@ -9,31 +9,44 @@ const {
 } = require("../response/HttpError.js");
 const Order = require("../model/Order.js");
 const Countermodle = require("../model/OrderidCount.js");
+const Product = require("../model/product.js");
+const Payment = require("../model/Payment.js");
 
 const OrderList = async ({ io, userData }) => {
   try {
-    let successmessage = await Order.find({ userid: userData.userid });
+    let finddata = await Order.find({ userid: userData.userid });
     if (finddata.length === 0) {
       return successmessage(NOT_FOUND);
     } else {
-      return successmessage(successmessage);
+      return successmessage(finddata);
     }
   } catch (error) {
+    console.log(error);
     return errormessage(SERVER_ERROR);
   }
 };
 
-const OrderAdd = async ({ io, userData }) => {
+const OrderAdd = async ({ io, userData, data }) => {
   try {
-    let { orderserv, orderdate, Product, amount, qty } = userData;
+    var sqid;
 
-    try {
-      let cd = await Countermodle.findOneAndUpdate(
+    const today = new Date().toLocaleDateString();
+    const counterDoc = await Countermodle.findOne({ titles: "autoval" });
+    var sqid;
+
+    if (!counterDoc || counterDoc.lastUpdatedDate !== today) {
+      await Countermodle.findOneAndUpdate(
+        { titles: "autoval" },
+        { $set: { id: 1, lastUpdatedDate: today } },
+        { upsert: true, new: true }
+      );
+      sqid = 1;
+    } else {
+      const cd = await Countermodle.findOneAndUpdate(
         { titles: "autoval" },
         { $inc: { id: 1 } },
         { new: true }
       );
-      let sqid;
       if (cd === null) {
         const newval = new Countermodle({ titles: "autoval", id: 1 });
         await newval.save();
@@ -41,98 +54,154 @@ const OrderAdd = async ({ io, userData }) => {
       } else {
         sqid = cd.id;
       }
-    } catch (error) {
-      console.log("autoincrment err", error);
     }
-    console.log(sqid);
+
+    var totalamount = 0;
     try {
-      let responce = await Order.create({
-        orderserv,
-        orderdate,
-        Product,
-        amount,
-        qty,
+      await Promise.all(data.map(async (e) => {
+        let find_product = await Product.find({ _id: e.id });
+        let quantity_amt
+        if (find_product[0].mesur === 'gm') {
+          quantity_amt = parseInt(e.qty, 10) / 1000
+        } else {
+          quantity_amt = parseInt(e.qty, 10)
+
+        }
+        let quantity = parseInt(e.qty, 10)
+        var amount = quantity_amt * parseInt(find_product[0].price, 10);
+        totalamount += amount;
+        await Order.create({
+          Product: find_product[0]._id,
+          amount: amount,
+          qty: quantity,
+          orderserv: false,
+          orderid: sqid,
+        });
+      }));
+    } catch (error) {
+      console.log(error);
+      return errormessage("Order Entry Error");
+    }
+
+    try {
+      await Payment.create({
+        amount: totalamount,
         orderid: sqid,
       });
-
+      io.emit('kitchen_order_list', sqid);
       return successmessage(CREATE_SUCCESS);
     } catch (error) {
-      if (error.name === "ValidationError") {
-        var fieldErrors = {};
-        Object.keys(error.errors).forEach((key) => {
-          fieldErrors = error.errors[key].message;
-        });
-        return errormessage(fieldErrors);
-      } else {
-        return errormessage(error);
-      }
+      return errormessage("Payment Entry Error");
     }
   } catch (error) {
+    console.error('Error:', error);
     return errormessage(SERVER_ERROR);
   }
 };
 
-const ProductUpdate = async ({ io, userData }) => {
+const OrderRenewAdd = async ({ io, data, id }) => {
   try {
-    let { name, price, status, mesur, id } = userData;
-    let Find_Product = await Order.findById(id);
-
-    if (Find_Order.length > 0) {
-      try {
-        let new_data = {};
-        if (orderserv) {
-          new_data.orderserv = orderserv;
-        }
-        if (orderdate) {
-          new_data.orderdate = orderdate;
-        }
-        if (Product) {
-          new_data.Product = Product;
-        }
-        if (amount) {
-          new_data.amount = amount;
-        }
-        if (qty) {
-          new_data.qty = qty;
-        }
-
-        let responce = await Order.findByIdAndUpdate(
-          id,
-          { $set: new_data },
-          { new: true }
-        );
-        return successmessage(UPDATE_SUCCESS);
-      } catch (error) {
-        if (error.name === "ValidationError") {
-          var fieldErrors = {};
-          Object.keys(error.errors).forEach((key) => {
-            fieldErrors = error.errors[key].message;
-          });
-          return errormessage(fieldErrors);
-        } else {
-          return errormessage(error);
-        }
-      }
+    var totalamount = 0;
+    var today = new Date();
+    today.setHours(0, 0, 0, 0);
+    let find_product = await Product.find({ _id: data.selectedproid });
+    let quantity_amt
+    if (find_product[0].mesur === 'gm') {
+      quantity_amt = parseInt(data.qty, 10) / 1000
     } else {
-      return errormessage(NOT_FOUND);
+      quantity_amt = parseInt(data.qty, 10)
     }
-  } catch (error) {
-    return errormessage(SERVER_ERROR);
-  }
-};
-
-const ProductRemove = async ({ io, userData }) => {
-  try {
-    let { id } = userData;
+    let quantity = parseInt(data.qty, 10)
+    var amount = quantity_amt * parseInt(find_product[0].price, 10);
+    totalamount += amount;
     try {
-      let responce = await Order.findByIdAndDelete(id);
-      return successmessage(DELETE_SUCCESS);
+      await Order.create({
+        Product: find_product[0]._id,
+        amount: amount,
+        qty: quantity,
+        orderserv: false,
+        orderid: id,
+      });
+
+      let find_payment = await Payment.find({
+        orderid: id, orderdate: {
+          $gte: today,
+          $lt: new Date(today.getTime() + 24 * 60 * 60 * 1000),
+        },
+      });
+      let paymentamt = find_payment[0].amount + totalamount
+      let datas = await Payment.findByIdAndUpdate(find_payment[0]._id, { $set: { amount: paymentamt } })
+      return successmessage(CREATE_SUCCESS);
     } catch (error) {
-      return errormessage(error);
+      return errormessage(SERVER_ERROR)
     }
+
   } catch (error) {
+    console.error('Error:', error);
     return errormessage(SERVER_ERROR);
   }
 };
 
-module.exports = { productList, ProductAdd, ProductUpdate, ProductRemove };
+const OrderUpdate = async ({ io, data, id }) => {
+  try {
+    var sqid = 0;
+    var totalamount = 0;
+    var oldamount = 0;
+    var today = new Date();
+    today.setHours(0, 0, 0, 0);
+    let find_product = await Product.find({ _id: data.Product._id });
+    let quantity_amt
+    if (find_product[0].mesur === 'gm') {
+      quantity_amt = parseInt(data.qty, 10) / 1000
+    } else {
+      quantity_amt = parseInt(data.qty, 10)
+    }
+    let quantity = parseInt(data.qty, 10)
+    let amount = quantity_amt * parseInt(find_product[0].price, 10);
+    totalamount += amount;
+    oldamount += data.amount
+    try {
+      await Order.findOneAndUpdate({ _id: data._id }, { $set: { amount: totalamount, qty: quantity } }, { new: true });
+
+      let find_payment = await Payment.find({
+        orderid: id, orderdate: {
+          $gte: today,
+          $lt: new Date(today.getTime() + 24 * 60 * 60 * 1000),
+        },
+      });
+      let paymentamt = find_payment[0].amount + totalamount - oldamount
+      await Payment.findByIdAndUpdate(find_payment[0]._id, { $set: { amount: paymentamt } }, { new: true })
+      io.emit('kitchen_order_list', id);
+      return successmessage(CREATE_SUCCESS);
+    } catch (error) {
+      console.log(error)
+      return errormessage("Order Update Error");
+    }
+
+  } catch (error) {
+    console.error('Error:', error);
+    return errormessage(SERVER_ERROR);
+  }
+};
+const OrderRemove = async ({ io, data }) => {
+  try {
+    var today = new Date();
+    today.setHours(0, 0, 0, 0);
+    await Order.findByIdAndDelete(data._id);
+    let find_payment = await Payment.find({
+      orderid: data.orderid, orderdate: {
+        $gte: today,
+        $lt: new Date(today.getTime() + 24 * 60 * 60 * 1000),
+      },
+    });
+    let paymentamt = find_payment[0].amount - data.amount
+    await Payment.findByIdAndUpdate(find_payment[0]._id, { $set: { amount: paymentamt } }, { new: true })
+    io.emit('kitchen_order_list', data.orderid);
+    return successmessage(DELETE_SUCCESS);
+  } catch (error) {
+    console.error(error);
+    return errormessage(SERVER_ERROR);
+  }
+};
+
+module.exports = { OrderList, OrderAdd, OrderUpdate, OrderRemove, OrderRenewAdd };
